@@ -1,46 +1,109 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <ctype.h>
 
-int isNumber(const char *str) {
+long double
+strtold_ (const char* restrict nptr, char** restrict endptr) {
 
-    if (str == NULL || *str == '\0') {
-       return 0;
+    char* p = (char*) nptr;
+
+    while (isspace((unsigned char) *p)) {
+        p++;
     }
 
-    char *endptr;
-    strtold(str, &endptr);
+    if (p == NULL || *p == '\0') {
+        goto FAIL;
+    }
 
-    if (endptr == str) {
+    int sign = 1;
+    if (*p == '-' || *p == '+') {
+        sign = (*p++ == '-') ? -1 : 1;
+        if (*p == '\0') {
+            goto FAIL;
+        }
+    }
+
+    long double result = 0.0L;
+    long double power = 1.0L;
+
+    while (isdigit((unsigned char) *p)) {
+        result = result * 10.0L + (*p++ - '0');
+    }
+
+    if (*p == '.') {
+        p++;
+
+        while (isdigit((unsigned char) *p)) {
+            result = result * 10.0L + (*p++ - '0');
+            power *= 10.0L;
+        }
+    }
+
+    result = sign * result / power;
+
+    if (endptr != NULL) {
+        *endptr = (char*) p;
+    }
+
+    return result;
+
+    FAIL:
+    endptr = NULL;
+    return 0.0L;
+}
+
+int
+is_number (const char* str) {
+
+    if (str == NULL || *str == '\0') {
         return 0;
     }
 
-    while (isspace((unsigned char)*endptr)) {
+    char* endptr;
+    strtold_(str, &endptr);
+
+    if (endptr == str || endptr == NULL) {
+        return 0;
+    }
+
+    while (isspace((unsigned char) *endptr)) {
         endptr++;
     }
 
     return *endptr == '\0';
 }
 
-int main() {
+int
+main (void) {
 
-    printf("isNumber? %s\n", isNumber("0")      ? "yes" : "no");
-    printf("isNumber? %s\n", isNumber("123")    ? "yes" : "no");
-    printf("isNumber? %s\n", isNumber("123.")   ? "yes" : "no");
-    printf("isNumber? %s\n", isNumber("12.3")   ? "yes" : "no");
-    printf("isNumber? %s\n", isNumber("-123")   ? "yes" : "no");
-    printf("isNumber? %s\n", isNumber("-12.3")  ? "yes" : "no");
-    printf("isNumber? %s\n", isNumber("  -12.3")? "yes" : "no");
-    printf("isNumber? %s\n", isNumber(" 0  ")   ? "yes" : "no");
+    const char* success[] = {
+            "0", ".3", "0.3", "123", " 0  ", "123.", "12.3", "-123", "-12.3", " -0  ", " +0  ", " -.1  ", "  -12.3",
+            NULL
+    };
+
+    const char* fail[] = {
+            "", "+", "-", "1a", "a1", "   ", " 1 2", "hello", "1-2.3", "-12.3.3", NULL
+    };
+
+    for (int i = 0; success[i] != NULL; i++) {
+
+        printf("success[%d]:\t", i);
+        if (is_number(success[i])) {
+            printf("pass\n");
+        } else {
+            printf("fail\n");
+        }
+    }
+
     printf("\n");
-    printf("isNumber? %s\n", isNumber(" 1 2")   ? "yes" : "no");
-    printf("isNumber? %s\n", isNumber("")       ? "yes" : "no");
-    printf("isNumber? %s\n", isNumber("   ")    ? "yes" : "no");
-    printf("isNumber? %s\n", isNumber("-12.3.3")? "yes" : "no");
-    printf("isNumber? %s\n", isNumber("1-2.3")  ? "yes" : "no");
-    printf("isNumber? %s\n", isNumber("hello")  ? "yes" : "no");
-    printf("isNumber? %s\n", isNumber("1a")     ? "yes" : "no");
-    printf("isNumber? %s\n", isNumber("a1")     ? "yes" : "no");
+
+    for (int i = 0; fail[i] != NULL; i++) {
+        printf("fail[%d]:\t", i);
+        if (!is_number(fail[i])) {
+            printf("pass\n");
+        } else {
+            printf("fail\n");
+        }
+    }
 
     return 0;
 }
